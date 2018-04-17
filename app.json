@@ -1,0 +1,25 @@
+{
+  "name": "Origin Bridge server",
+  "description": "The Origin bridge server connects the old world to the new.",
+  "keywords": [
+    "flask",
+    "python",
+  ],
+  "repository": "https://github.com/OriginProtocol/bridge-server",
+  "scripts": {
+    "postdeploy": "python -c 'from database import db; db.create_all()'"
+  },
+  "env": {
+    "FLASK_SECRET_KEY": {
+      "description": "A secret key used for signing cookie",
+      "generator": "secret"
+    },
+  },
+  "scripts": {
+    "postdeploy": "python -c 'from database import db; db.create_all()'"
+  },
+  "addons": [
+    "heroku-postgresql"
+  ],
+
+}
