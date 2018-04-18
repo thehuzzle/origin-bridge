@@ -1,25 +1,48 @@
 {
-  "name": "Origin Bridge server",
-  "description": "The Origin bridge server connects the old world to the new.",
-  "keywords": [
-    "flask",
-    "python",
-  ],
+  "name": "Origin Protocol website",
+  "description": "Development version of originprotocol.com",
+  "website": "https://www.originprotocol.com/",
   "repository": "https://github.com/OriginProtocol/bridge-server",
-  "scripts": {
-    "postdeploy": "python -c 'from database import db; db.create_all()'"
-  },
+  "logo": "https://avatars1.githubusercontent.com/u/30638653",
+  "success_url": "/",
   "env": {
     "FLASK_SECRET_KEY": {
-      "description": "A secret key used for signing cookie",
-      "generator": "secret"
+      "description": "Secret key for the Flask framework",
+      "generator": "secret",
+      "required": true
+    },
+    "PROJECTPATH": {
+      "description": "Root directory for the app (you don't need to change this)",
+      "value": "/app",
+      "required": true
+    },
+    "HOST": {
+      "description": "Replace 'app-name' with the App Name you chose above",
+      "value": "app-name.herokuapp.com",
+      "required": true
+    },
+    "SENDGRID_API_KEY": {
+      "description": "SendGrid key (if you want to be able to send emails)",
+      "required": false
+    },
+    "RPC_SERVER": {
+      "description": "rpc server url",
+      "required": true
+    },
+    "RPC_PROTOCOL": {
+      "description": "rpc server protocol [wss, https]",
+      "required": true
     },
   },
-  "scripts": {
-    "postdeploy": "python -c 'from database import db; db.create_all()'"
-  },
-  "addons": [
-    "heroku-postgresql"
+  "addons": [{
+      "plan": "heroku-postgresql:hobby-dev"
+    },
+    {
+      "plan": "heroku-redis:hobby-dev"
+    }
   ],
-
+  "buildpacks": [{
+      "url": "heroku/python"
+    },
+  ]
 }
