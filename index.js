@@ -12,13 +12,28 @@ const CONV = "conv"
 const web3 = new Web3("http://127.0.0.1:8545/")
 
 class InsertOnlyKeystore {
-  constructor(verifier, post_verify) {
-    this._verifier = verifier
-    this._post_verify = post_verify
+  constructor() {
+    this._signVerifyRegistry = {}
   }
 
-  setPostVerify(postFunc) {
-    this._post_verify = postFunc
+  registerSignVerify(db_sig, signFunc, verifyFunc, postFunc) {
+    this._signVerifyRegistry[db_sig] = { signFunc, verifyFunc, postFunc}
+  }
+
+  getSignVerify(id) {
+    let parts = id.split("/")
+    let end = parts[parts.length-1]
+
+    let obj = this._signVerifyRegistry[end]
+    if (obj) return obj
+
+    for (const k of Object.keys(this._signVerifyRegistry))
+    {
+      if (k.endsWith("-") && end.startsWith(k))
+      {
+        return this._signVerifyRegistry[k]
+      }
+    }
   }
 
   createKey(id) {
@@ -40,15 +55,20 @@ class InsertOnlyKeystore {
     try{
       let message = JSON.parse(data.toString('utf8'))
       console.log("we got a message to verify:", message, " sig:", signature)
-      if (message.payload.op == "PUT" || message.payload.op == "ADD")
+      let obj = this.getSignVerify(message.id)
+      if (obj && obj.verifyFunc)
       {
-          if(this._verifier(signature, key, message, data))
+        if (message.payload.op == "PUT" || message.payload.op == "ADD")
+        {
+          //verify all for now
+          if(obj.verifyFunc(signature, key, message, data))
           {
-            if (this._post_verify){
-              this._post_verify(message)
+            if (obj.postFunc){
+              obj.postFunc(message)
             }
             return Promise.resolve(true)
           }
+        }
       }
     } catch(error)
     {
@@ -215,28 +235,24 @@ function rebroadcastOnReplicate(DB, db){
 }
 
 ipfs.id().then(async (peer_id) => {
-    let orbit_global = new OrbitDB(ipfs, "odb/globalNames", {keystore:new InsertOnlyKeystore(verifyRegistrySignature)})
+    let orbit_global = new OrbitDB(ipfs, "odb/Main", {keystore:new InsertOnlyKeystore()})
+
+    orbit_global.keystore.registerSignVerify(GLOBAL_KEYS, undefined, verifyRegistrySignature, message => {
+        handleGlobalRegistryWrite(orbit_global, message.payload)
+      })
+
     let global_registry = await orbit_global.kvstore(GLOBAL_KEYS, { write: ['*'] })
     rebroadcastOnReplicate(orbit_global, global_registry)
 
+    orbit_global.keystore.registerSignVerify(CONV_INIT_PREFIX, undefined, verifyConversationSignature(global_registry),
+      message => {
+        let eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
+        onConverse(orbit_global, eth_address, message.payload)
+      })
+
+    orbit_global.keystore.registerSignVerify(CONV, undefined, verifyMessageSignature(global_registry))
+
     console.log("Oribt registry started...:", global_registry.id)
-
-    let conv_init_db = new OrbitDB(ipfs, "odb/conv_init", {keystore:new InsertOnlyKeystore(verifyConversationSignature(global_registry))})
-    let conv_db = new OrbitDB(ipfs, "odb/convs", {keystore:new InsertOnlyKeystore(verifyMessageSignature(global_registry))})
-
-    orbit_global.keystore.setPostVerify(message => {
-        handleGlobalRegistryWrite(conv_init_db, message.payload)
-    })
-
-    conv_init_db.keystore.setPostVerify( message => {
-      let eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
-      onConverse(conv_db, eth_address, message.payload)
-    })
-
-      
-    /*global_registry.events.on('write', (dbname, hash, entry) => {
-      handleGlobalRegistryWrite(conv_db, entry.payload)
-    })*/
 
     global_registry.events.on('ready', (address) => 
       {
