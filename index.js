@@ -90,8 +90,13 @@ function verifyRegistrySignature(signature, key, message) {
     //console.log("extracted address is:", extracted_address)
     if (extracted_address == value.address.toLowerCase())
     {
-      console.log("Key Verified: ", value.msg, " Signature: ", signature,  " Signed with: ", verify_address)
-      return true
+
+      let verify_ph_address = web3.eth.accounts.recover(value.ph, value.phs)
+      if (verify_ph_address == value.address)
+      {
+        console.log("Key Verified: ", value.msg, " Signature: ", signature,  " Signed with: ", verify_address)
+        return true
+      }
     }
   }
   console.log("Verify failed...")
