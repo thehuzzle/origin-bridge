@@ -29,11 +29,14 @@ EVENT_HASH_TO_EVENT_TYPE_MAP = {
         EventType.PURCHASE_REVIEW,
 }
 
+
 class EmptyIPFSHashError(Exception):
     pass
 
+
 NULL_BYTES32 = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
 
 class DatabaseIndexer():
     """
@@ -269,7 +272,7 @@ class EventHandler():
 
             else:
                 logging.error("Received unexpected event type %s hash %s",
-                             event_type, event_hash)
+                              event_type, event_hash)
 
         except EmptyIPFSHashError:
             # TODO: Handle as a critical error once we are live on mainnet.
@@ -281,4 +284,3 @@ class EventHandler():
                              transaction_index=payload['transactionIndex'])
 
         logging.debug("Finished processing event")
-
