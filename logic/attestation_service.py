@@ -27,6 +27,7 @@ from requests_oauthlib import OAuth1
 from sqlalchemy import func
 from util import time_, attestations, urls
 from web3 import Web3
+from marshmallow import ValidationError
 
 signing_key = settings.ATTESTATION_SIGNING_KEY
 
@@ -307,12 +308,12 @@ def get_airbnb_verification_code(eth_address, airbnbUserid):
         )
 
 
-def normalize_number(phone):
+def normalize_number(phone, fieldName='phone'):
     try:
         lookup = get_twilio_client().lookups.phone_numbers(phone).fetch()
         return lookup.national_format
     except TwilioRestException as e:
-        raise PhoneVerificationError('Invalid phone number.')
+        raise ValidationError('Invalid phone number.', fieldName)
 
 
 def numeric_eth(str_eth_address):

@@ -15,6 +15,7 @@ from logic.service_utils import (PhoneVerificationError,
                                  AirbnbVerificationError)
 from tests.factories.attestation import VerificationCodeFactory
 from util.time_ import utcnow
+from marshmallow import ValidationError
 VC = db_models.VerificationCode
 
 SIGNATURE_LENGTH = 132
@@ -62,7 +63,7 @@ def test_generate_phone_verification_code_phone_already_in_db(
 
 
 def test_generate_phone_verification_code_twilio_exception(
-        mock_send_sms_exception, session, mock_normalize_number):
+        mock_send_sms_exception, mock_normalize_number):
     phone = '5551231212'
     with pytest.raises(PhoneVerificationError) as service_err:
         VerificationService.generate_phone_verification_code(phone)
@@ -72,6 +73,12 @@ def test_generate_phone_verification_code_twilio_exception(
     db_code = VC.query.filter(VC.phone == phone).first()
     assert db_code is None
 
+def test_generate_phone_invalid_phone_number(mock_normalize_number_exception):
+    phone = '111'
+    with pytest.raises(ValidationError) as validation_error:
+        VerificationService.generate_phone_verification_code(phone)
+
+    assert str(validation_error.value) == 'Invalid phone number.'
 
 def test_verify_phone_valid_code(session, mock_normalize_number):
     vc_obj = VerificationCodeFactory.build()
@@ -107,7 +114,6 @@ def test_verify_phone_expired_code(session, mock_normalize_number):
         VerificationService.verify_phone(**args)
 
     assert str(service_err.value) == 'The code you provided has expired.'
-
 
 def test_verify_phone_wrong_code(session, mock_normalize_number):
     vc_obj = VerificationCodeFactory.build()
