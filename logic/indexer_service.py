@@ -266,7 +266,6 @@ class EventHandler():
 
             elif event_type == EventType.PURCHASE_REVIEW:
                 data = self._get_review_data(payload)
-                logging.info("DATA=%s" % data)
                 review_obj = self.db_indexer.create_or_update_review(data)
                 self.notifier.notify_review(review_obj)
                 self.search_indexer.create_or_update_review(data)
