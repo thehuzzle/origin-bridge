@@ -176,6 +176,15 @@ def test_generate_email_verification_code_new_phone(MockHttpClient):
     assert db_code.created_at is not None
     assert db_code.updated_at is not None
 
+@mock.patch('python_http_client.client.Client')
+def test_generate_email_incorrect_email_format(MockHttpClient):
+    email = 'IamNotAnEmaiAddress'
+
+    with pytest.raises(ValidationError) as validation_error:
+        resp = VerificationService.generate_email_verification_code(email)
+
+    assert str(validation_error.value) == 'Not a valid email address.'
+
 
 @mock.patch('python_http_client.client.Client')
 def test_generate_email_verification_code_email_already_in_db(
@@ -266,7 +275,7 @@ def test_verify_email_email_not_found(mock_now, session):
 
     args = {
         'eth_address': str_eth(sample_eth_address),
-        'email': 'garbage',
+        'email': 'someOne@notFound.com',
         'code': vc_obj.code
     }
     mock_now.return_value = vc_obj.expires_at - datetime.timedelta(minutes=1)
@@ -274,6 +283,24 @@ def test_verify_email_email_not_found(mock_now, session):
         VerificationService.verify_email(**args)
 
     assert str(service_err.value) == 'The given email was not found.'
+
+
+@mock.patch('util.time_.utcnow')
+def test_verify_email_incorrect_email_format(mock_now, session):
+    vc_obj = VerificationCodeFactory.build()
+    session.add(vc_obj)
+    session.commit()
+
+    args = {
+        'eth_address': str_eth(sample_eth_address),
+        'email': 'IamNotAnEmaiAddress',
+        'code': vc_obj.code
+    }
+    mock_now.return_value = vc_obj.expires_at - datetime.timedelta(minutes=1)
+    with pytest.raises(ValidationError) as validation_error:
+        VerificationService.verify_email(**args)
+
+    assert str(validation_error.value) == 'Not a valid email address.'
 
 
 def test_facebook_auth_url():

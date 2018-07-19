@@ -115,6 +115,8 @@ class VerificationService:
         })
 
     def generate_email_verification_code(email):
+        validate_email(email)
+
         db_code = VC.query \
             .filter(func.lower(VC.email) == func.lower(email)) \
             .first()
@@ -137,6 +139,8 @@ class VerificationService:
         return VerificationServiceResponse()
 
     def verify_email(email, code, eth_address):
+        validate_email(email)
+
         db_code = VC.query \
             .filter(func.lower(VC.email) == func.lower(email)) \
             .first()
@@ -307,6 +311,9 @@ def get_airbnb_verification_code(eth_address, airbnbUserid):
             )
         )
 
+def validate_email(email):
+    if not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
+        raise ValidationError('Not a valid email address.', 'email')
 
 def normalize_number(phone, fieldName='phone'):
     try:
