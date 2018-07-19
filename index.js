@@ -1,15 +1,33 @@
 import ipfsAPI from 'ipfs-api'
 import _ from 'lodash'
 import Web3 from 'web3'
+import url from 'url'
 
 import OrbitDB from 'orbit-db'
 import Keystore from 'orbit-db-keystore'
+
+//get the dotenv config
+require('dotenv').config()
 
 const GLOBAL_KEYS = "global"
 const CONV_INIT_PREFIX = "convo-init-"
 const CONV = "conv"
 
-const web3 = new Web3("http://127.0.0.1:8545/")
+const web3 = new Web3(process.env.RPC_SERVER)
+
+
+const ipfsURL = new url.parse(process.env.MESSAGING_IPFS_URL)
+const ipfs_opts = {host:ipfsURL.hostname, port:ipfsURL.port, protocol:ipfsURL.protocol.slice(0, -1)}
+console.log("opts:", ipfs_opts)
+
+if (process.env.MESSAGING_IPFS_TOKEN) {
+  ipfs_opts["headers"] = {
+    authorization: 'Bearer ' + process.env.MESSAGING_IPFS_TOKEN
+  }
+}
+const ipfs = ipfsAPI(ipfs_opts)
+process.env.LOG = "DEBUG"
+
 
 class InsertOnlyKeystore {
   constructor() {
@@ -21,10 +39,10 @@ class InsertOnlyKeystore {
   }
 
   getSignVerify(id) {
-    let parts = id.split("/")
-    let end = parts[parts.length-1]
+    const parts = id.split("/")
+    const end = parts[parts.length-1]
 
-    let obj = this._signVerifyRegistry[end]
+    const obj = this._signVerifyRegistry[end]
     if (obj) return obj
 
     for (const k of Object.keys(this._signVerifyRegistry))
@@ -53,9 +71,9 @@ class InsertOnlyKeystore {
 
   verify(signature, key, data) {
     try{
-      let message = JSON.parse(data.toString('utf8'))
+      const message = JSON.parse(data.toString('utf8'))
       console.log("we got a message to verify:", message, " sig:", signature)
-      let obj = this.getSignVerify(message.id)
+      const obj = this.getSignVerify(message.id)
       if (obj && obj.verifyFunc)
       {
         if (message.payload.op == "PUT" || message.payload.op == "ADD")
@@ -79,19 +97,19 @@ class InsertOnlyKeystore {
 }
 
 function verifyRegistrySignature(signature, key, message) {
-  let value = message.payload.value
-  let set_key = message.payload.key
+  const value = message.payload.value
+  const set_key = message.payload.key
   //console.log("Verify Registry:", message, " key: ", key, " sig: ", signature)
-  let verify_address = web3.eth.accounts.recover(value.msg, signature)
+  const verify_address = web3.eth.accounts.recover(value.msg, signature)
   //console.log("Verify address:", verify_address)
   if (verify_address == set_key && value.msg.includes(value.address))
   {
-    let extracted_address = "0x" + web3.utils.sha3(value.pub_key).substr(-40)
+    const extracted_address = "0x" + web3.utils.sha3(value.pub_key).substr(-40)
     //console.log("extracted address is:", extracted_address)
     if (extracted_address == value.address.toLowerCase())
     {
 
-      let verify_ph_address = web3.eth.accounts.recover(value.ph, value.phs)
+      const verify_ph_address = web3.eth.accounts.recover(value.ph, value.phs)
       if (verify_ph_address == value.address)
       {
         console.log("Key Verified: ", value.msg, " Signature: ", signature,  " Signed with: ", verify_address)
@@ -107,8 +125,8 @@ function verifyMessageSignature(keys_map)
 {
   return (signature, key, message, buffer) => {
     console.log("Verify Message:", message, " key: ", key, " sig: ", signature)
-    let verify_address = web3.eth.accounts.recover(buffer.toString("utf8"), signature)
-    let entry = keys_map.get(key)
+    const verify_address = web3.eth.accounts.recover(buffer.toString("utf8"), signature)
+    const entry = keys_map.get(key)
     //only two addresses should have write access to here
     if (entry.address == verify_address)
     {
@@ -122,14 +140,11 @@ function verifyMessageSignature(keys_map)
 function verifyConversationSignature(keys_map)
 {
   return (signature, key, message, buffer) => {
-    console.log("Verifying:", buffer,  " signature: ", signature)
-    let verify_address = web3.eth.accounts.recover(buffer.toString("utf8"), signature)
-    let eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
-    console.log("Verify Conversation:", message, " key: ", key, " sig: ", signature, " eth address: ", eth_address)
+    const verify_address = web3.eth.accounts.recover(buffer.toString("utf8"), signature)
+    const eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
     if(key == message.payload.key || key == eth_address) //only one of the two conversers can set this parameter
     {
-      let entry = keys_map.get(key)
-      console.log("checking ", entry.address, " against: ", verify_address)
+      const entry = keys_map.get(key)
       if (entry.address == verify_address)
       {
         return true
@@ -140,34 +155,14 @@ function verifyConversationSignature(keys_map)
 }
 
 
-function verifyConvMsg(converser1, converser2){
-  return (o, content_object) => {
-    /*
-    let verify_address = web3.eth.accounts.recover(JSON.stringify(content_obj.msg), content_object.sig)
-
-    if (verify_address == converser1 || verify_address == converser2)
-    {
-    */
-    console.log("Verified conv msg for: ", content_object)
-    return true
-    //}
-  }
-}
-
-
 function verifyConversers(conversee, keys_map){
   return (o, content_object) => {
-    let check_string = joinConversationKey(conversee, o.parentSub) + content_object.ts.toString()
-    //console.log("check_string:", check_string)
-    //console.log("verify conv o:", o)
-    //console.log("converser:", content_object)
+    const check_string = joinConversationKey(conversee, o.parentSub) + content_object.ts.toString()
 
-    let verify_address = web3.eth.accounts.recover(check_string, content_object.sig)
+    const verify_address = web3.eth.accounts.recover(check_string, content_object.sig)
 
-    //console.log("converser recover address:", verify_address)
-
-    let parent_key = keys_map.get(o.parentSub)
-    let conversee_key = keys_map.get(conversee)
+    const parent_key = keys_map.get(o.parentSub)
+    const conversee_key = keys_map.get(conversee)
 
     if ((parent_key && verify_address == parent_key.address) || (conversee_key && verify_address == keys_map.get(conversee).address))
     {
@@ -178,11 +173,8 @@ function verifyConversers(conversee, keys_map){
   }
 }
 
-let ipfs = ipfsAPI("/ip4/127.0.0.1/tcp/5002")
-process.env.LOG = "DEBUG"
-
 //the OrbitDB should be the message one
-let messagingRoomsMap = {}
+const messagingRoomsMap = {}
 
 async function startRoom(room_db, room_id, store_type, writers, share_func) {
   let key = room_id
@@ -194,7 +186,7 @@ async function startRoom(room_db, room_id, store_type, writers, share_func) {
   if(!messagingRoomsMap[key])
   {
     messagingRoomsMap[key] = "pending"
-    let room = await room_db[store_type](room_id, {write:writers})
+    const room = await room_db[store_type](room_id, {write:writers})
     console.log("Room started:", room.id)
     if (share_func){
       share_func(room)
@@ -208,24 +200,23 @@ async function startRoom(room_db, room_id, store_type, writers, share_func) {
 
 function joinConversationKey(converser1, converser2)
 {
-  let keys = [converser1, converser2]
+  const keys = [converser1, converser2]
   keys.sort()
 
   return keys.join('-')
 }
 
 function onConverse(room_db, conversee, payload){
-    let converser = payload.key
+    const converser = payload.key
     console.log("started conversation between:", converser, " and ", conversee)
-    let writers = [converser, conversee].sort()
+    const writers = [converser, conversee].sort()
     startRoom(room_db, CONV, "eventlog", writers)
 }
 
 function handleGlobalRegistryWrite(conv_init_db, payload) {
-  console.log("We see an entry:", payload)
   if (payload.op == "PUT")
   {
-    let eth_address = payload.key
+    const eth_address = payload.key
     console.log("started conversation for:", eth_address)
     startRoom(conv_init_db, CONV_INIT_PREFIX + eth_address, 'kvstore', ['*'])
   }
@@ -233,25 +224,24 @@ function handleGlobalRegistryWrite(conv_init_db, payload) {
 
 function rebroadcastOnReplicate(DB, db){
   db.events.on('replicated', (dbname) => {
-    console.log("rebroadcasting heads for ", db.id, "...")
     //rebroadcast
     DB._pubsub.publish(db.id,  db._oplog.heads)
   })
 }
 
 ipfs.id().then(async (peer_id) => {
-    let orbit_global = new OrbitDB(ipfs, "odb/Main", {keystore:new InsertOnlyKeystore()})
+    const orbit_global = new OrbitDB(ipfs, "odb/Main", {keystore:new InsertOnlyKeystore()})
 
     orbit_global.keystore.registerSignVerify(GLOBAL_KEYS, undefined, verifyRegistrySignature, message => {
         handleGlobalRegistryWrite(orbit_global, message.payload)
       })
 
-    let global_registry = await orbit_global.kvstore(GLOBAL_KEYS, { write: ['*'] })
+    const global_registry = await orbit_global.kvstore(GLOBAL_KEYS, { write: ['*'] })
     rebroadcastOnReplicate(orbit_global, global_registry)
 
     orbit_global.keystore.registerSignVerify(CONV_INIT_PREFIX, undefined, verifyConversationSignature(global_registry),
       message => {
-        let eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
+        const eth_address = message.id.substr(-42) //hopefully the last 42 is the eth address
         onConverse(orbit_global, eth_address, message.payload)
       })
 
@@ -264,9 +254,7 @@ ipfs.id().then(async (peer_id) => {
         console.log("ready...", global_registry.all())
       })
 
-
     // testing it's best to drop this for now
-    //global_registry.drop()
     global_registry.load()
 })
 
