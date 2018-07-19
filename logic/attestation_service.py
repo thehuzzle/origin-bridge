@@ -313,7 +313,10 @@ def normalize_number(phone, fieldName='phone'):
         lookup = get_twilio_client().lookups.phone_numbers(phone).fetch()
         return lookup.national_format
     except TwilioRestException as e:
-        raise ValidationError('Invalid phone number.', fieldName)
+        if e.code == 21211: # Twilio invalid phone number - Validation exception
+            raise ValidationError(e.msg, fieldName)
+        else: # Any other exception is a service exception
+            raise PhoneVerificationError(e.msg)
 
 
 def numeric_eth(str_eth_address):
