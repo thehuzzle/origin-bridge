@@ -185,7 +185,7 @@ def test_generate_email_incorrect_email_format(MockHttpClient):
     email = 'IamNotAnEmaiAddress'
 
     with pytest.raises(ValidationError) as validation_error:
-        resp = VerificationService.generate_email_verification_code(email)
+        VerificationService.generate_email_verification_code(email)
 
     assert str(validation_error.value) == 'Not a valid email address.'
 
