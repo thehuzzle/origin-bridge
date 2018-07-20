@@ -248,16 +248,14 @@ class VerificationService:
         })
 
     def generate_airbnb_verification_code(eth_address, airbnbUserId):
-        if not re.compile(r"^\d*$").match(airbnbUserId):
-            raise ValidationError('AirbnbUserId should be a number.', 'airbnbUserId')
+        validate_airbnb_user_id(airbnbUserId)
 
         return VerificationServiceResponse({
             'code': get_airbnb_verification_code(eth_address, airbnbUserId)
         })
 
     def verify_airbnb(eth_address, airbnbUserId):
-        if not re.compile(r"^\d*$").match(airbnbUserId):
-            raise ValidationError('AirbnbUserId should be a number.', 'airbnbUserId')
+        validate_airbnb_user_id(airbnbUserId)
 
         code = get_airbnb_verification_code(eth_address, airbnbUserId)
 
@@ -311,6 +309,10 @@ def get_airbnb_verification_code(eth_address, airbnbUserid):
             )
         )
 
+def validate_airbnb_user_id(airbnb):
+    if not re.compile(r"^\d*$").match(airbnbUserId):
+        raise ValidationError('AirbnbUserId should be a number.', 'airbnbUserId')
+
 def validate_email(email):
     if not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
         raise ValidationError('Not a valid email address.', 'email')
@@ -357,7 +359,12 @@ def send_code_via_email(address, code):
         ('Your Origin verification code is {}.'
          ' It will expire in 30 minutes.').format(code))
     mail = Mail(from_email, subject, to_email, content)
-    sg.client.mail.send.post(request_body=mail.get())
+    try:
+        sg.client.mail.send.post(request_body=mail.get())
+    except Exception as e:
+        raise EmailVerificationError(
+            'Can not send verification email.', status_code=500)
+
 
 
 # proxy function so that we can do caching on this later on if we want to
