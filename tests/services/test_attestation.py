@@ -73,12 +73,14 @@ def test_generate_phone_verification_code_twilio_exception(
     db_code = VC.query.filter(VC.phone == phone).first()
     assert db_code is None
 
+
 def test_generate_phone_invalid_phone_number(mock_normalize_number_exception):
     phone = '111'
     with pytest.raises(ValidationError) as validation_error:
         VerificationService.generate_phone_verification_code(phone)
 
     assert str(validation_error.value) == 'Invalid phone number.'
+
 
 def test_verify_phone_valid_code(session, mock_normalize_number):
     vc_obj = VerificationCodeFactory.build()
@@ -114,6 +116,7 @@ def test_verify_phone_expired_code(session, mock_normalize_number):
         VerificationService.verify_phone(**args)
 
     assert str(service_err.value) == 'The code you provided has expired.'
+
 
 def test_verify_phone_wrong_code(session, mock_normalize_number):
     vc_obj = VerificationCodeFactory.build()
@@ -175,6 +178,7 @@ def test_generate_email_verification_code_new_phone(MockHttpClient):
     assert db_code.expires_at is not None
     assert db_code.created_at is not None
     assert db_code.updated_at is not None
+
 
 @mock.patch('python_http_client.client.Client')
 def test_generate_email_incorrect_email_format(MockHttpClient):
@@ -498,7 +502,8 @@ def test_verify_airbnb_verification_code_incorrect(mock_urllib_request):
 
 
 @mock.patch('logic.attestation_service.urlopen')
-def test_verify_airbnb_verification_code_incorrect_user_id_format(mock_urllib_request):
+def test_verify_airbnb_verification_code_incorrect_user_id_format(
+        mock_urllib_request):
     mock_urllib_request.return_value.read.return_value = """
         <html><div>
         Airbnb profile description
@@ -522,14 +527,16 @@ def test_verify_airbnb_verification_code_incorrect_user_id_format(mock_urllib_re
     {},
     {}
 ))
-def test_verify_airbnb_verification_code_non_existing_user(mock_urllib_request):
+def test_verify_airbnb_verification_code_non_existing_user(
+        mock_urllib_request):
     with pytest.raises(AirbnbVerificationError) as service_err:
         VerificationService.verify_airbnb(
             '0x112234455C3a32FD11230C42E7Bccd4A84e02010',
             "99999999999999999"
         )
 
-    assert str(service_err.value) == 'Airbnb user id: 99999999999999999 not found.'
+    assert str(
+        service_err.value) == 'Airbnb user id: 99999999999999999 not found.'
 
 
 @mock.patch('logic.attestation_service.urlopen', side_effect=HTTPError(
@@ -539,7 +546,8 @@ def test_verify_airbnb_verification_code_non_existing_user(mock_urllib_request):
     {},
     {}
 ))
-def test_verify_airbnb_verification_code_internal_server_error(mock_urllib_request):
+def test_verify_airbnb_verification_code_internal_server_error(
+        mock_urllib_request):
     with pytest.raises(AirbnbVerificationError) as service_err:
         VerificationService.verify_airbnb(
             '0x112234455C3a32FD11230C42E7Bccd4A84e02010',

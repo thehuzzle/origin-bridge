@@ -270,11 +270,14 @@ class VerificationService:
             response = urlopen(request)
         except HTTPError as e:
             if e.code == 404:
-                raise AirbnbVerificationError('Airbnb user id: ' + airbnbUserId + ' not found.')
+                raise AirbnbVerificationError(
+                    'Airbnb user id: ' + airbnbUserId + ' not found.')
             else:
-                raise AirbnbVerificationError("Can not fetch user's Airbnb profile.")
+                raise AirbnbVerificationError(
+                    "Can not fetch user's Airbnb profile.")
         except URLError as e:
-            raise AirbnbVerificationError("Can not fetch user's Airbnb profile.")
+            raise AirbnbVerificationError(
+                "Can not fetch user's Airbnb profile.")
 
         if code not in response.read().decode('utf-8'):
             raise AirbnbVerificationError(
@@ -309,22 +312,29 @@ def get_airbnb_verification_code(eth_address, airbnbUserid):
             )
         )
 
-def validate_airbnb_user_id(airbnb):
+
+def validate_airbnb_user_id(airbnbUserId):
     if not re.compile(r"^\d*$").match(airbnbUserId):
-        raise ValidationError('AirbnbUserId should be a number.', 'airbnbUserId')
+        raise ValidationError(
+            'AirbnbUserId should be a number.',
+            'airbnbUserId')
+
 
 def validate_email(email):
-    if not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
+    if not re.match(
+        r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)",
+            email):
         raise ValidationError('Not a valid email address.', 'email')
+
 
 def normalize_number(phone, fieldName='phone'):
     try:
         lookup = get_twilio_client().lookups.phone_numbers(phone).fetch()
         return lookup.national_format
     except TwilioRestException as e:
-        if e.code == 21211: # Twilio invalid phone number - Validation exception
+        if e.code == 21211:  # Twilio invalid phone number - Validation exception
             raise ValidationError(e.msg, fieldName)
-        else: # Any other exception is a service exception
+        else:  # Any other exception is a service exception
             raise PhoneVerificationError(e.msg)
 
 
@@ -364,7 +374,6 @@ def send_code_via_email(address, code):
     except Exception as e:
         raise EmailVerificationError(
             'Can not send verification email.', status_code=500)
-
 
 
 # proxy function so that we can do caching on this later on if we want to
