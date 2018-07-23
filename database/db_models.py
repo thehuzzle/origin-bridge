@@ -4,21 +4,6 @@ from database import db
 from .notification_models import *  # NOQA
 
 
-class VerificationCode(db.Model):
-    email = db.Column(db.String(256), index=True)
-    code = db.Column(db.String(10), primary_key=True)
-    expires_at = db.Column(db.DateTime(timezone=True))
-    created_at = db.Column(
-        db.DateTime(
-            timezone=True),
-        server_default=func.now())
-    updated_at = db.Column(
-        db.DateTime(
-            timezone=True),
-        server_default=func.now(),
-        onupdate=func.now())
-
-
 class Listing(db.Model):
     contract_address = db.Column(db.String(255),
                                  primary_key=True)
