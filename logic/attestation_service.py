@@ -3,7 +3,6 @@ import datetime
 import http.client
 import json
 import requests
-import secrets
 import sendgrid
 import re
 from random import randint
@@ -15,15 +14,14 @@ from sendgrid.helpers.mail import Email, Content, Mail
 from config import settings
 from flask import session
 from logic.service_utils import (
-    PhoneVerificationError,
+    AirbnbVerificationError,
     EmailVerificationError,
     FacebookVerificationError,
+    PhoneVerificationError,
     TwitterVerificationError,
-    AirbnbVerificationError
 )
 from requests_oauthlib import OAuth1
-from sqlalchemy import func
-from util import time_, attestations, urls
+from util import attestations, urls
 from web3 import Web3
 
 signing_key = settings.ATTESTATION_SIGNING_KEY
