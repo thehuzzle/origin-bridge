@@ -1,5 +1,3 @@
-from sqlalchemy import func
-
 from database import db
 from .notification_models import *  # NOQA
 
