@@ -192,7 +192,7 @@ class VerificationService:
         from_email = Email(settings.SENDGRID_FROM_EMAIL)
         to_email = Email(email)
         subject = 'Your Origin Verification Code'
-        message = 'Your Origin verification code is {}'.format(verification_code)
+        message = 'Your Origin verification code is {}.'.format(verification_code)
         message += ' It will expire in 30 minutes.'
         content = Content('text/plain', message)
         mail = Mail(from_email, subject, to_email, content)
