@@ -196,9 +196,14 @@ class VerificationService:
         content = Content('text/plain', message)
         mail = Mail(from_email, subject, to_email, content)
 
-        # Send email via SendGrid
-        sg = sendgrid.SendGridAPIClient(apikey=settings.SENDGRID_API_KEY)
-        sg.client.mail.send.post(request_body=mail.get())
+        try:
+            _send_email_using_sendgrid(mail)
+        except Exception as exc:
+            # SendGrid does not have its own error types but might in the future
+            # See https://github.com/sendgrid/sendgrid-python/issues/315
+            raise EmailVerificationError(
+                'Could not send verification code. Please try again shortly.'
+            )
 
         return VerificationServiceResponse()
 
@@ -389,3 +394,16 @@ def get_airbnb_verification_code(eth_address, airbnbUserid):
 
 def numeric_eth(str_eth_address):
     return int(str_eth_address, 16)
+
+
+def _send_email_using_sendgrid(mail):
+    """Send a SendGrid mail object using the SendGrid API.
+
+    This functionality is in a separate function so it can be mocked during
+    tests.
+
+    Args:
+        mail (sendgrid.helpers.mail.mail.Mail) - mail to be sent
+    """
+    sg = sendgrid.SendGridAPIClient(apikey=settings.SENDGRID_API_KEY)
+    sg.client.mail.send.post(request_body=mail.get())
