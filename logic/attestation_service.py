@@ -110,6 +110,7 @@ class VerificationService:
             phone (str): Phone number in national format.
             code (int): Verification code for the country_calling_code and phone
                 combination
+            eth_address (str): Address of ERC725 identity token for claim
 
         Returns:
             VerificationServiceResponse
@@ -172,7 +173,7 @@ class VerificationService:
         to compare against user input.
 
         Args:
-            email (str): email address to send the verification to
+            email (str): Email address to send the verification to
 
         Raises:
             ValidationError: Verification request failed due to invalid arguments
@@ -214,7 +215,7 @@ class VerificationService:
         Args:
             email (str): Email address being verified
             code (int): Verification code for the email address
-            eth_address (str):
+            eth_address (str): Address of ERC725 identity token for claim
 
         Returns:
             VerificationServiceResponse
