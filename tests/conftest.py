@@ -340,7 +340,7 @@ def listing_contract(
         listing_registry_contract,
         eth_test_seller):
 
-    contract_name = 'ListingsRegistry'
+    contract_name = 'UnitListing'
     linked_contract = 'PurchaseLibrary'
     with open("./contracts/{}.json".format(contract_name)) as f:
         contract_interface = json.loads(f.read())
