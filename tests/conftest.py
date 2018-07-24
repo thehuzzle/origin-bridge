@@ -321,6 +321,13 @@ def listing_registry_contract(
         .transact({'from': web3.eth.coinbase})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     contract_address = deploy_receipt['contractAddress']
+
+    # Set the active registry.
+    txn_hash = listings_registry_storage_contract.functions\
+        .setActiveRegistry(contract_address)\
+        .transact({'from': web3.eth.coinbase})
+    _ = wait_for_transaction(web3, txn_hash)
+
     return contract(address=contract_address)
 
 
@@ -337,7 +344,7 @@ def listing_contract(
     linked_contract = 'PurchaseLibrary'
     with open("./contracts/{}.json".format(contract_name)) as f:
         contract_interface = json.loads(f.read())
-    wait_for_block()
+    wait_for_block(web3)
     CONTRACT_META = {
         "abi": contract_interface['abi'],
         "bytecode": contract_interface['bytecode'].replace(
@@ -358,8 +365,8 @@ def listing_contract(
     listings_length = listing_registry_contract.functions.listingsLength().call()
     assert listings_length > 0
     # get the last listing created
-    contract_address = listing_registry_contract.functions.getListing(
-        listings_length - 1).call()[0]
+    contract_address = listing_registry_contract.functions.getListingAddress(
+        listings_length - 1).call()
     return contract(address=contract_address)
 
 
