@@ -265,16 +265,43 @@ def purchase_lib_contract(web3, wait_for_transaction, wait_for_block):
 
     contract = web3.eth.contract(**CONTRACT_META)
     deploy_txn_hash = contract\
-        .constructor().transact({'from': web3.eth.coinbase,
-                                 'gas': 1000000})
+        .constructor().transact({'from': web3.eth.coinbase})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     contract_address = deploy_receipt['contractAddress']
     return contract(address=contract_address)
 
 
 @pytest.fixture()
-def listing_registry_contract(web3, wait_for_transaction, wait_for_block,
-                              purchase_lib_contract):
+def listings_registry_storage_contract(
+        web3,
+        wait_for_transaction,
+        wait_for_block):
+    contract_name = 'ListingsRegistryStorage'
+
+    with open("./contracts/{}.json".format(contract_name)) as f:
+        contract_interface = json.loads(f.read())
+    wait_for_block(web3)
+
+    CONTRACT_META = {
+        "abi": contract_interface['abi'],
+        "bytecode": contract_interface['bytecode']
+    }
+    contract = web3.eth.contract(**CONTRACT_META)
+    deploy_txn_hash = contract\
+        .constructor().transact({'from': web3.eth.coinbase})
+    deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
+    contract_address = deploy_receipt['contractAddress']
+    return contract(address=contract_address)
+
+
+@pytest.fixture()
+def listing_registry_contract(
+        web3,
+        wait_for_transaction,
+        wait_for_block,
+        purchase_lib_contract,
+        listings_registry_storage_contract):
+
     contract_name = 'ListingsRegistry'
     linked_contract = 'PurchaseLibrary'
     with open("./contracts/{}.json".format(contract_name)) as f:
@@ -290,8 +317,8 @@ def listing_registry_contract(web3, wait_for_transaction, wait_for_block,
     }
 
     contract = web3.eth.contract(**CONTRACT_META)
-    deploy_txn_hash = contract.constructor()\
-        .transact({'from': web3.eth.coinbase, 'gas': 1000000})
+    deploy_txn_hash = contract.constructor(listings_registry_storage_contract.address)\
+        .transact({'from': web3.eth.coinbase})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     contract_address = deploy_receipt['contractAddress']
     return contract(address=contract_address)
@@ -305,13 +332,18 @@ def listing_contract(
         purchase_lib_contract,
         listing_registry_contract,
         eth_test_seller):
-    contract_name = 'UnitListing'
+
+    contract_name = 'ListingsRegistry'
+    linked_contract = 'PurchaseLibrary'
     with open("./contracts/{}.json".format(contract_name)) as f:
         contract_interface = json.loads(f.read())
-    wait_for_block(web3)
-
+    wait_for_block()
     CONTRACT_META = {
-        "abi": contract_interface['abi']
+        "abi": contract_interface['abi'],
+        "bytecode": contract_interface['bytecode'].replace(
+            get_contract_internal_name(linked_contract),
+            purchase_lib_contract.address[2:]
+        )
     }
 
     contract = web3.eth.contract(**CONTRACT_META)
@@ -319,8 +351,7 @@ def listing_contract(
     deploy_txn_hash = \
         listing_registry_contract.functions.create(
             base58_to_hex(ipfs_hash),
-            3, 25).transact({'from': eth_test_seller,
-                             'gas': 1000000})
+            3, 25).transact({'from': eth_test_seller, 'gas': 1000000})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     assert deploy_receipt["gasUsed"] > 0
     # we better have created one of these
@@ -347,7 +378,7 @@ def purchase_contract(web3, wait_for_transaction, wait_for_block,
 
     contract = web3.eth.contract(**CONTRACT_META)
     deploy_txn_hash = listing_contract.functions.buyListing(
-        5).transact({'from': eth_test_buyer, 'gas': 1000000})
+        5).transact({'from': eth_test_buyer})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     assert deploy_receipt["gasUsed"] > 0
     # we better have created one of these
@@ -367,7 +398,6 @@ def purchase_stage_awaiting_payment(web3, wait_for_transaction,
     # add payment to the purchase to move the stage forward
     deploy_txn_hash = \
         purchase_contract.functions.pay().transact({'from': eth_test_buyer,
-                                                    'gas': 1000000,
                                                     'value': 25})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     assert deploy_receipt["gasUsed"] > 0
@@ -383,7 +413,7 @@ def purchase_stage_shipping_pending(web3, wait_for_transaction, wait_for_block,
     # confirm shipping to move the stage forward
     deploy_txn_hash = \
         purchase_contract.functions.sellerConfirmShipped()\
-        .transact({'from': eth_test_seller, 'gas': 1000000})
+        .transact({'from': eth_test_seller})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     assert deploy_receipt["gasUsed"] > 0
 
@@ -401,7 +431,7 @@ def purchase_stage_buyer_pending(web3, wait_for_transaction, wait_for_block,
     ipfs_hash = base58_to_hex("QmZtQDL4UjQWryQLjsS5JUsbdbn2B27Tmvz2gvLkw7wmmb")
     deploy_txn_hash = \
         purchase_contract.functions.buyerConfirmReceipt(2, ipfs_hash)\
-        .transact({'from': eth_test_buyer, 'gas': 1000000})
+        .transact({'from': eth_test_buyer})
     deploy_receipt = wait_for_transaction(web3, deploy_txn_hash)
     assert deploy_receipt["gasUsed"] > 0
 
