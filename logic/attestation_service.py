@@ -192,7 +192,8 @@ class VerificationService:
         from_email = Email(settings.SENDGRID_FROM_EMAIL)
         to_email = Email(email)
         subject = 'Your Origin Verification Code'
-        message = 'Your Origin verification code is {}.'.format(verification_code)
+        message = 'Your Origin verification code is {}.'.format(
+            verification_code)
         message += ' It will expire in 30 minutes.'
         content = Content('text/plain', message)
         mail = Mail(from_email, subject, to_email, content)
@@ -353,11 +354,14 @@ class VerificationService:
             response = urlopen(request)
         except HTTPError as e:
             if e.code == 404:
-                raise AirbnbVerificationError('Airbnb user id: ' + airbnbUserId + ' not found.')
+                raise AirbnbVerificationError(
+                    'Airbnb user id: ' + airbnbUserId + ' not found.')
             else:
-                raise AirbnbVerificationError("Can not fetch user's Airbnb profile.")
+                raise AirbnbVerificationError(
+                    "Can not fetch user's Airbnb profile.")
         except URLError as e:
-            raise AirbnbVerificationError("Can not fetch user's Airbnb profile.")
+            raise AirbnbVerificationError(
+                "Can not fetch user's Airbnb profile.")
 
         if code not in response.read().decode('utf-8'):
             raise AirbnbVerificationError(

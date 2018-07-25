@@ -149,7 +149,8 @@ def test_verify_phone_expired_code():
     with pytest.raises(ValidationError) as validation_err:
         VerificationService.verify_phone(**args)
 
-    assert(validation_err.value.messages[0]) == 'Verification code has expired.'
+    assert(validation_err.value.messages[0]
+           ) == 'Verification code has expired.'
     assert(validation_err.value.field_names[0]) == 'code'
 
 
@@ -171,13 +172,16 @@ def test_verify_phone_invalid_code():
     with pytest.raises(ValidationError) as validation_err:
         VerificationService.verify_phone(**args)
 
-    assert(validation_err.value.messages[0]) == 'Verification code is incorrect.'
+    assert(validation_err.value.messages[0]
+           ) == 'Verification code is incorrect.'
     assert(validation_err.value.field_names[0]) == 'code'
 
 
 @mock.patch('logic.attestation_service._send_email_using_sendgrid')
 @mock.patch('logic.attestation_service.datetime')
-def test_send_email_verification(mock_datetime, mock_send_email_using_sendgrid):
+def test_send_email_verification(
+        mock_datetime,
+        mock_send_email_using_sendgrid):
     mock_send_email_using_sendgrid.return_value = True
 
     now = datetime.datetime.utcnow()
@@ -195,7 +199,8 @@ def test_send_email_verification(mock_datetime, mock_send_email_using_sendgrid):
 
 
 @mock.patch('logic.attestation_service._send_email_using_sendgrid')
-def test_send_email_verification_sendgrid_error(mock_send_email_using_sendgrid):
+def test_send_email_verification_sendgrid_error(
+        mock_send_email_using_sendgrid):
     mock_send_email_using_sendgrid.side_effect = AttributeError
 
     with mock.patch('logic.attestation_service.session', dict()):
@@ -250,7 +255,8 @@ def test_verify_email_expired_code():
         with pytest.raises(ValidationError) as validation_err:
             VerificationService.verify_email(**args)
 
-    assert(validation_err.value.messages[0]) == 'Verification code has expired.'
+    assert(validation_err.value.messages[0]
+           ) == 'Verification code has expired.'
     assert(validation_err.value.field_names[0]) == 'code'
 
 
@@ -273,7 +279,8 @@ def test_verify_email_invalid_code(mock_session):
         with pytest.raises(ValidationError) as validation_err:
             VerificationService.verify_email(**args)
 
-    assert(validation_err.value.messages[0]) == 'Verification code is incorrect.'
+    assert(validation_err.value.messages[0]
+           ) == 'Verification code is incorrect.'
     assert(validation_err.value.field_names[0]) == 'code'
 
 
@@ -488,7 +495,8 @@ def test_verify_airbnb_verification_code_incorrect(mock_urllib_request):
 
 
 @mock.patch('logic.attestation_service.urlopen')
-def test_verify_airbnb_verification_code_incorrect_user_id_format(mock_urllib_request):
+def test_verify_airbnb_verification_code_incorrect_user_id_format(
+        mock_urllib_request):
     mock_urllib_request.return_value.read.return_value = """
         <html><div>
         Airbnb profile description
@@ -512,14 +520,16 @@ def test_verify_airbnb_verification_code_incorrect_user_id_format(mock_urllib_re
     {},
     {}
 ))
-def test_verify_airbnb_verification_code_non_existing_user(mock_urllib_request):
+def test_verify_airbnb_verification_code_non_existing_user(
+        mock_urllib_request):
     with pytest.raises(AirbnbVerificationError) as service_err:
         VerificationService.verify_airbnb(
             '0x112234455C3a32FD11230C42E7Bccd4A84e02010',
             "99999999999999999"
         )
 
-    assert str(service_err.value) == 'Airbnb user id: 99999999999999999 not found.'
+    assert str(
+        service_err.value) == 'Airbnb user id: 99999999999999999 not found.'
 
 
 @mock.patch('logic.attestation_service.urlopen', side_effect=HTTPError(
@@ -529,7 +539,8 @@ def test_verify_airbnb_verification_code_non_existing_user(mock_urllib_request):
     {},
     {}
 ))
-def test_verify_airbnb_verification_code_internal_server_error(mock_urllib_request):
+def test_verify_airbnb_verification_code_internal_server_error(
+        mock_urllib_request):
     with pytest.raises(AirbnbVerificationError) as service_err:
         VerificationService.verify_airbnb(
             '0x112234455C3a32FD11230C42E7Bccd4A84e02010',
