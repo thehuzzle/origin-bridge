@@ -10,6 +10,7 @@ from random import randint
 from marshmallow.exceptions import ValidationError
 from urllib.request import Request, urlopen, HTTPError, URLError
 from sendgrid.helpers.mail import Email, Content, Mail
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from config import settings
 from flask import session
@@ -183,7 +184,8 @@ class VerificationService:
 
         verification_code = str(randint(100000, 999999))
         # Save the verification code and expiry in a server side session
-        session[email] = {
+        session['email_attestation'] = {
+            'email': generate_password_hash(email),
             'code': verification_code,
             'expiry': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
         }
@@ -224,8 +226,11 @@ class VerificationService:
         Raises:
             ValidationError: Verification request failed due to invalid arguments
         """
-        verification_obj = session.get(email, None)
+        verification_obj = session.get('email_attestation', None)
         if not verification_obj:
+            raise ValidationError('No verification code was found.')
+
+        if not check_password_hash(verification_obj['email'], email):
             raise ValidationError(
                 'No verification code was found for that email.', 'email'
             )
@@ -236,7 +241,7 @@ class VerificationService:
         if verification_obj['code'] != code:
             raise ValidationError('Verification code is incorrect.', 'code')
 
-        session.pop(email)
+        session.pop('email_attestation')
 
         # TODO: determine what the text should be
         data = 'email verified'

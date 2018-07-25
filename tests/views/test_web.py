@@ -70,9 +70,9 @@ def test_email_verify(mock_send_email_using_sendgrid, client):
     response = post_json(client, '/api/attestations/email/generate-code', data)
 
     assert response.status_code == 200
-    assert data['email'] in session
+    assert 'email_attestation' in session
 
-    verification_code = session[data['email']]['code']
+    verification_code = session['email_attestation']['code']
 
     data['identity'] = str_eth(sample_eth_address)
     data['code'] = verification_code

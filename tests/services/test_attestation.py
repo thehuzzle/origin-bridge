@@ -5,6 +5,7 @@ from urllib.request import HTTPError
 
 from marshmallow.exceptions import ValidationError
 import responses
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from logic.attestation_service import (VerificationService,
                                        VerificationServiceResponse)
@@ -193,9 +194,12 @@ def test_send_email_verification(
     with mock.patch('logic.attestation_service.session', dict()) as session:
         response = VerificationService.send_email_verification(email)
         assert isinstance(response, VerificationServiceResponse)
-        assert email in session
-        assert len(session[email]['code']) == 6
-        assert session[email]['expiry'] == now + expire_in
+        assert 'email_attestation' in session
+        assert len(session['email_attestation']['code']) == 6
+        assert session['email_attestation']['expiry'] == now + expire_in
+        assert check_password_hash(
+            session['email_attestation']['email'], email
+        )
 
 
 @mock.patch('logic.attestation_service._send_email_using_sendgrid')
@@ -214,7 +218,8 @@ def test_send_email_verification_sendgrid_error(
 @mock.patch('logic.attestation_service.session')
 def test_verify_email_valid_code(mock_session):
     session_dict = {
-        'origin@protocol.foo': {
+        'email_attestation': {
+            'email': generate_password_hash('origin@protocol.foo'),
             'code': '12345',
             'expiry': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
         }
@@ -239,7 +244,8 @@ def test_verify_email_valid_code(mock_session):
 def test_verify_email_expired_code():
     # Mock a session object with an expiry time in the past
     session_dict = {
-        'origin@protocol.foo': {
+        'email_attestation': {
+            'email': generate_password_hash('origin@protocol.foo'),
             'code': '12345',
             'expiry': datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
         }
@@ -263,7 +269,8 @@ def test_verify_email_expired_code():
 @mock.patch('logic.attestation_service.session')
 def test_verify_email_invalid_code(mock_session):
     session_dict = {
-        'origin@protocol.foo': {
+        'email_attestation': {
+            'email': generate_password_hash('origin@protocol.foo'),
             'code': '12345',
             'expiry': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
         }
@@ -284,7 +291,7 @@ def test_verify_email_invalid_code(mock_session):
     assert(validation_err.value.field_names[0]) == 'code'
 
 
-def test_verify_email_email_not_found():
+def test_verify_email_no_verification_sent():
     args = {
         'eth_address': str_eth(sample_eth_address),
         'email': 'origin@protocol.foo',
@@ -292,6 +299,29 @@ def test_verify_email_email_not_found():
     }
 
     with mock.patch('logic.attestation_service.session', dict()):
+        with pytest.raises(ValidationError) as validation_err:
+            VerificationService.verify_email(**args)
+
+    assert(validation_err.value.messages[0]) == \
+        'No verification code was found.'
+
+
+def test_verify_email_invalid_email():
+    session_dict = {
+        'email_attestation': {
+            'email': generate_password_hash('not_origin@protocol.foo'),
+            'code': '12345',
+            'expiry': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        }
+    }
+
+    args = {
+        'eth_address': str_eth(sample_eth_address),
+        'email': 'origin@protocol.foo',
+        'code': '54321'
+    }
+
+    with mock.patch('logic.attestation_service.session', session_dict):
         with pytest.raises(ValidationError) as validation_err:
             VerificationService.verify_email(**args)
 
