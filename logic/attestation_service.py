@@ -236,6 +236,8 @@ class VerificationService:
         if verification_obj['code'] != code:
             raise ValidationError('Verification code is incorrect.', 'code')
 
+        session.pop(email)
+
         # TODO: determine what the text should be
         data = 'email verified'
         # TODO: determine claim type integer code for email verification
